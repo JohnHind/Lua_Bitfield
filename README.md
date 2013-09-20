@@ -1,4 +1,3 @@
-
 ##Introduction
 
 A bitfield is an add-in Lua type provided by the `bitfield.dll` / `bitfield.so` run-time loadable library. It is implemented as a subtype of userdata which stores a vector of bits (or booleans) between 1 and 256 bits wide. The state of the bits in a bitfield is mutable, but the width is not (it is established when the bitfield is created).
@@ -118,7 +117,7 @@ Ranges may be named and used to reference parts of bitfields using dot syntax an
 	bf.count = 8
 	bf.payload = bitfield(26,5436)
 
-The width of the bitfield is determined from the maximum index found in the Named Range Table (32 bits wide in this example). If the ranges do not cover all the bits in the desired width, simply include a dummy range that spans the entire width. Ranges may overlap allowing constructs similar to unions in C. Note that the names of methods of bitfield (`tostring`, `tonumber`) may not be used as range names.
+The width of the bitfield is determined from the maximum index found in the Named Range Table (32 bits wide in this example). If the ranges do not cover all the bits in the desired width, simply include a dummy range that spans the entire width. Ranges may overlap allowing constructs similar to unions in C.
 
 A common Named Range Table may be referenced by multiple bitfields:
 
