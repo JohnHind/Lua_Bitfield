@@ -1,28 +1,3 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
-
-<head>
-<title>Bitfield Type Library for Lua 5</title>
-<link rel="stylesheet" type="text/css" href="bitfield.css">
-<META HTTP-EQUIV="content-type" CONTENT="text/html; charset=utf-8">
-</head>
-
-<body>
-
-<hr>
-<h1>
-<a href="http://www.lua.org/"><img src="bitfield.gif" alt="" border="0"></a>
-Bitfield Type Library for Lua 5
-</h1>
-by John Hind
-<p>
-<small>
-Copyright &copy; 2013.
-Freely available under the terms of the
-<a href="http://www.lua.org/license.html">Lua license</a>.
-</small>
-<hr>
-<p>
 
 ##Introduction
 
@@ -223,11 +198,3 @@ The bitfield metatable is estensible to add methods and metamethods in Lua. To g
 It is not necessary (or desirable) to provide an `__index` metamethod in order to add methods. The standard metamethod checks string keys against the metatable and returns the value if found. Only string keys not present in the metatable are processed as range names. This means that the names of any methods added to the metatable cannot be used as range names.
 
 One interesting possibility is to define `__add` etc. metamethods to re-purpose the arithmetic operators to express bit-wise logical operations. It would (arguably) be reasonably natural for unary `-` to mean `not`, binary `-` to mean `nor`, `+` to mean `or`, and `*` to mean `and`. 
-
-<HR>
-<SMALL CLASS="footer">
-Last update:
-Fri Sep 6 13:50:00 GMT 2013
-</SMALL>
-<!--
--->
