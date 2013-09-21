@@ -78,7 +78,7 @@ Individual bits can be indexed as boolean values using a number index as already
 
 The indexed value is boolean by default for a single bit, or number (unsigned) for 2 upto the width of `lua_Unsigned` (32-bits in the standard Lua build), or binary (string). This may be changed to "boolean" (only for single bit ranges), "binary" (string), "bitfield", "unsigned" (number) or "packed" (string - see next section).
 
-	print(bf[bitrange("bitfield",1,4)]:tostring()) -- bitfield "1001"
+	print(bf[bitrange("bitfield",1,4)]) -- bitfield "1001"
 	print(bf[bitrange("binary",1,4)]) -- "1001" (a binary string)
 	print(bf[bitrange("unsigned",1)]) -- 1 (an unsigned number)
 
@@ -169,7 +169,7 @@ A binary string value is inserted at the cursor which is then incremented by the
 
 A bitfield is copied into the new bitfield at the cursor which is then incremented by the width of the copied bitfield.
 
-A boolean value sets or resets the bit at the cursor which is incremented by one.
+A boolean value sets or resets the bit at the cursor which is then incremented by one.
 
 A number (unsigned) may only be used in the left most list position and fills the remaining width from the cursor.
 
@@ -182,7 +182,7 @@ A string which is the name of a constant in the NRT may also be used. An unbound
 
 Returns a range key (implemented as an opaque four character string) or a constant which is a range key followed by a value in packed format (concatenated into a single string). Use this function as the index to a bitfield or to create the value for an entry in a Named Range Table.
 
-If `type` is supplied it must be one of the string keys "boolean", "bitfield", "binary", "unsigned", "packed", "const" or "uconst". If omitted, defaults to "boolean" for a single bit range, to "unsigned" for a multi-bit range of that fits in the `lua_Unsigned` type (32 bits or less in the standard Lua build), otherwise "binary".
+If `type` is supplied it must be one of the string keys "boolean", "bitfield", "binary", "unsigned", "packed", "const" or "uconst". If omitted, defaults to "boolean" for a single bit range, to "unsigned" for a multi-bit range that fits in the `lua_Unsigned` type (32 bits or less in the standard Lua build), otherwise "binary".
 
 If `first` is omitted, the range covers the entire width of the bitfield. If supplied, `first` must be a number `1..256` specifying the starting index of the range. `last` must be `first..256` or omitted, in which case it defaults to `first` producing a single bit range.
 
@@ -196,4 +196,4 @@ The bitfield metatable is estensible to add methods and metamethods in Lua. To g
 
 It is not necessary (or desirable) to provide an `__index` metamethod in order to add methods. The standard metamethod checks string keys against the metatable and returns the value if found. Only string keys not present in the metatable are processed as range names. This means that the names of any methods added to the metatable cannot be used as range names.
 
-One interesting possibility is to define `__add` etc. metamethods to re-purpose the arithmetic operators to express bit-wise logical operations. It would (arguably) be reasonably natural for unary `-` to mean `not`, binary `-` to mean `nor`, `+` to mean `or`, and `*` to mean `and`. 
+The file `testop.lua` defines metamethods to re-purpose the arithmetic operators to express bit-wise logical operations. It is (arguably) reasonably natural for unary `-` to mean `not`, binary `-` to mean `nor`, `+` to mean `or`, and `*` to mean `and`. 
