@@ -83,6 +83,7 @@ void setbit(bf_ud* ud, BYTE ix, BYTE v) {
 
 /* Return an individual bit from ud */
 int getbit(bf_ud* ud, BYTE ix) {
+	if (ix > UDBITS(ud)) return 0;
 	return (UDBYTEIX(ud,ix) & UDMASK(ix)) != 0;
 }
 
@@ -278,11 +279,11 @@ int checkNRT(lua_State* L, int ix) {
 	return m;
 }
 
-/* validate a bit index (1..width) on the stack and returns it as (0..width-1) */
-BYTE checkindex(lua_State* L, int ix, int width) {
+/* validate a Lua bit index (1..256) on the stack and returns it as C index (0..255) */
+BYTE checkindex(lua_State* L, int ix) {
 	lua_Unsigned v = luaL_checkunsigned(L, ix);
-	if ((v < 1) || (v > 256) || ((int)v > width))
-		return luaL_argerror(L, ix, "Invalid bitfield index");
+	if ((v < 1) || (v > 256))
+		return luaL_argerror(L, ix, "Bitfield index must be 1..256");
 	return (BYTE)(v-1);
 }
 
@@ -400,9 +401,9 @@ static int bitrange(lua_State* L) {
 			b.s = 0; b.e = 255;
 		} else { /* Compulsory start of range and optional end */
 			if (lua_type(L, p) != LUA_TNUMBER) return luaL_argerror(L, p, "Bad parameter type");
-			b.s = checkindex(L, p++, 256);
+			b.s = checkindex(L, p++);
 			b.e = b.s;
-			if (!lua_isnone(L, p)) b.e = checkindex(L, p++, 256);
+			if (!lua_isnone(L, p)) b.e = checkindex(L, p++);
 		}
 	}
 	if (b.e < b.s) return luaL_argerror(L, p, "End of range cannot be before start");
@@ -440,13 +441,9 @@ static int bf_index(lua_State* L) {
 		if (luaL_getmetafield(L, 1, lua_tostring(L, 2))) return 1; /* Allows methods to be added by user */
 		ty = getrange(L, 1, 2, &st, &ed);
 		ix = st;
-		if (ty <= 0) {
-			return luaL_argerror(L, 2, "Invalid range name");
-		} else if (ix > (UDBITS(ud))) {
-			return luaL_argerror(L, 2, "Bitfield index out of range");
-		}
+		if (ty <= 0) return luaL_argerror(L, 2, "Invalid range name");
 	} else { /* If not a string, assume it is supposed to be a numeric bit index */
-		ix = checkindex(L, 2, (UDBITS(ud))+1);
+		ix = checkindex(L, 2);
 		ty = BF_TBOOLEAN; ed = 0;
 	}
 	if (ed > UDBITS(ud)) ed = UDBITS(ud); /* Saturate range end to width of bitfield */
@@ -465,9 +462,10 @@ static int bf_newindex(lua_State* L) {
 		if (ep > UDBITS(ud)) ep = UDBITS(ud);
 		ix = sp;
 	} else { /* If not a string key, must be numeric bit index */
-		ix = checkindex(L, 2, (UDBITS(ud))+1);
+		ix = checkindex(L, 2);
 		ep = ix;
 	}
+	if (ix > UDBITS(ud)) return 0;
 	switch (lua_type(L, 3)) { /* Lua type of new value */
 	case LUA_TUSERDATA: /* Must be a bitfield */
 		if ((ty >= 0) && (ty != BF_TBITFIELD))

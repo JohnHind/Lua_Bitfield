@@ -32,6 +32,10 @@ print("00", bitfield(2))
 
 print("11", bitfield(2,"1"))
 
+print("0011", bitfield(4,bitfield("11")))
+
+print("1111", bitfield(4,"1",bitfield("11")))
+
 print("** Concatenate **")
 
 t = true .. false .. true .. false
@@ -55,7 +59,9 @@ print("** Mutate **")
 
 t1 = bitfield("1101110")
 t1[3] = bitfield(1)
+t1[8] = true -- out of range set should not raise error
 print("1101010", tostring(t1))
+print("false", tostring(t1[8]))
 
 print("** Range indexing **")
 
