@@ -1,6 +1,7 @@
 /* bitfield.c      (c) 2013 John Hind (john.hind@zen.co.uk)
 **      Lua add-in data type bitfield.dll
 ** Same license as Lua 5.2.2 (c) 1994-2012 Lua.org, PUC-Rio
+** http://www.lua.org/license.html
 */
 
 /* on Linux compile in directory also containing lua header files using:
@@ -20,11 +21,16 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+/* Enable with Lua 5.1 - from https://github.com/hishamhm/lua-compat-5.2 */
+#include "compat-5.2.h"
+
 #define LIBVERSION ("Bitfield 1.0")
 
 #define METANAME ("jh-bitfield")
 
 #define BYTE unsigned char
+
+#define USBITS (sizeof(lua_Unsigned)*8)				 /* Max number of bits in Unsigned type */
 
 /* USERDATA: In C, byte indexes and bitfield width are stored in BYTE. Indexes run 0..255
 ** and width is one less than the actual width (0 means 1 bit, 255 means 256 bits). On the Lua
@@ -36,7 +42,6 @@ typedef struct bf_ud { BYTE c; BYTE d; } bf_ud;
 #define UDBYTEOF(ud,of) (*((&(ud)->d)+(of)))			 /* Reference to byte at given offset */
 #define UDMASK(ix) (1<<((ix)&7))                         /* Mask for bit in byte, from bit index */
 #define UDBITS(ud) ((ud)->c)							 /* Reference to bits-1 in ud */
-#define UDUSBITS (sizeof(lua_Unsigned)*8)				 /* Max number of bits in Unsigned type */
 
 /* RANGE: Ranges are keyed using a 4-byte Lua string. The first byte is constant 255 (to make
 ** sure the string is non-printable). The second byte is the type constant (BF_ keys below).
@@ -144,20 +149,33 @@ int setpacked(lua_State* L, bf_ud* ud, int ix, BYTE sp, BYTE ep) {
 	return ep + 1;
 }
 
+/* Allocate a string buffer of size sz in a userdata.
+** Returns pointer to UD which is also pushed on stack
+*/
+char* buffinitsize(lua_State* L, size_t sz) {
+	return (char*)lua_newuserdata(L, sz * sizeof(char));
+}
+
+/* Converts UD at stack top into a string of size sz */
+void bufftostring(lua_State* L, size_t sz) {
+	lua_pushlstring(L, (char*)lua_touserdata(L, -1), sz);
+	lua_remove(L, -2);
+}
+
 /* Creates a packed string from the contents of ud between sp and ep and pushes it onto the stack
 ** Returns the number of values pushed (1)
 */
 int savepacked(lua_State* L, bf_ud* ud, BYTE sp, BYTE ep) {
-	luaL_Buffer b; int i; int bc; int by; int bp; BYTE x;
+	int i; int bc; int by; int bp; BYTE x; char* bb;
 	by = UDBYTES(ep - sp);
-	luaL_buffinitsize(L, &b, by);
+	bb = buffinitsize(L, by);
 	bc = 0; x = 0; bp = by;
 	for (i = (int)sp; (i <= (int)ep); i++) {
 		x |= ((BYTE)(getbit(ud, i)? 1 : 0)) << bc;
-		if (++bc == 8) { b.b[--bp] = x; bc = 0; x = 0; }
+		if (++bc == 8) { bb[--bp] = x; bc = 0; x = 0; }
 	}
-	if (bc > 0) b.b[0] = x;
-	luaL_pushresultsize(&b, by);
+	if (bc > 0) bb[0] = x;
+	bufftostring(L, by);
 	return 1;
 }
 
@@ -165,13 +183,13 @@ int savepacked(lua_State* L, bf_ud* ud, BYTE sp, BYTE ep) {
 ** a binary string or a number (unsigned). Returns the number of values pushed (1)
 */
 int getpacked(lua_State* L, int ix, int nb) {
-	luaL_Buffer b; const char* s; size_t ln; int i; int bc; int bp; BYTE x; int by; lua_Unsigned v;
+	const char* s; size_t ln; int i; int bc; int bp; BYTE x; int by; lua_Unsigned v; char* bb;
 	by = UDBYTES(nb - 1);
-	luaL_buffinitsize(L, &b, by);
-	for (i=0; (i < by); i++) b.b[i] = 0;
+	bb = buffinitsize(L, by);
+	for (i=0; (i < by); i++) bb[i] = 0;
 	switch (lua_type(L, ix)) {
 	case LUA_TBOOLEAN:
-		b.b[0] = (BYTE)(lua_toboolean(L, ix)? 1 : 0);
+		bb[0] = (BYTE)(lua_toboolean(L, ix)? 1 : 0);
 		break;
 	case LUA_TSTRING:
 		s = lua_tolstring(L, ix, &ln);
@@ -179,23 +197,23 @@ int getpacked(lua_State* L, int ix, int nb) {
 		bc = 0; x = 0; bp = by;
 		for (i = (int)ln - 1; (i >= 0); i--) {
 			x |= ((BYTE)(s[i] == '1')? 1 : 0) << bc;
-			if (++bc == 8) {b.b[--bp] = x; bc = 0; x = 0;}
+			if (++bc == 8) {bb[--bp] = x; bc = 0; x = 0;}
 		}
-		if (bc > 0) b.b[--bp] = x;
+		if (bc > 0) bb[--bp] = x;
 		break;
 	case LUA_TNUMBER:
 		v = lua_tounsigned(L, ix);
 		bp = by;
-		for (i = 0; (i <= UDUSBITS); i++) {
+		for (i = 0; (i <= USBITS); i++) {
 			x = (BYTE)((v >> (8*i)) & 0xFF);
-			b.b[--bp] = x;
+			bb[--bp] = x;
 			if (bp < 1) break;
 		}
 		break;
 	default:
 		return luaL_argerror(L, ix, "Invalid constant value");
 	}
-	luaL_pushresultsize(&b, by);
+	bufftostring(L, by);
 	return 1;
 }
 
@@ -203,14 +221,14 @@ int getpacked(lua_State* L, int ix, int nb) {
 ** pushes extracted value onto stack and returns number of values pushed (1 or 0)
 */
 int extractvalue(lua_State* L, BYTE ty, bf_ud* ud, BYTE sp, BYTE ep) {
-	bf_ud* ux; luaL_Buffer b; char* bp; int i, j; lua_Unsigned u = 0;
+	bf_ud* ux; char* bp; int i, j; lua_Unsigned u = 0;
 	switch (ty) {
 	case BF_TBOOLEAN:
 		if (ep > sp) return luaL_error(L, "Bitfield range too large for Boolean value");
 		lua_pushboolean(L, getbit(ud, sp));
 		return 1;
 	case BF_TUNSIGNED:
-		if (((ep - sp) + 1) > UDUSBITS)
+		if (((ep - sp) + 1) > USBITS)
 			return luaL_error(L, "Bitfield range too large for Number value");
 		for (i = ep; (i >= (int)sp); i--) {
 			u = u<<1;
@@ -223,9 +241,9 @@ int extractvalue(lua_State* L, BYTE ty, bf_ud* ud, BYTE sp, BYTE ep) {
 		j = 0; for (i = sp; (i <= ep); i++) setbit(ux, j++, getbit(ud, i));
 		return 1;
 	case BF_TBINARY:
-		bp = luaL_buffinitsize(L, &b, (ep-sp)+1);
+		bp = buffinitsize(L, (ep-sp)+1);
 		for (i = sp; (i <= ep); i++) bp[i-sp] = (getbit(ud, ep - i))? '1' : '0';
-		luaL_pushresultsize(&b, (ep-sp)+1);
+		bufftostring(L, (ep-sp)+1);
 		return 1;
 	case BF_TPACKED:
 		savepacked(L, ud, sp, ep);
@@ -409,7 +427,7 @@ static int bitrange(lua_State* L) {
 	if (b.e < b.s) return luaL_argerror(L, p, "End of range cannot be before start");
 	if (b.t == 0) { /* Default the type if not explicitly given */
 		b.t = (b.s == b.e)? BF_TBOOLEAN : BF_TUNSIGNED;
-		if ((b.e - b.s) >= UDUSBITS) b.t = BF_TBINARY;
+		if ((b.e - b.s) >= USBITS) b.t = BF_TBINARY;
 	}
 	if ((b.t == BF_TBOOLEAN) && (b.s != b.e))
 		return luaL_argerror(L, 1, "Boolean type invalid for range of more than one bit");
