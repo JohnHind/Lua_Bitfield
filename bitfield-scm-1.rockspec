@@ -3,7 +3,7 @@ version = "scm-1"
 
 local tag = "master"
 source = {
-   url = "https://raw.github.com/JohnHind/Lua_Bitfield/"..tag.."/bitfield.c",
+   url = "git://github.com/JohnHind/Lua_Bitfield/"..tag.."/bitfield.git",
    -- tag = tag,
 }
 

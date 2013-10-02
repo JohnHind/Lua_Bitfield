@@ -71,6 +71,12 @@ bf_ud* makeud(lua_State* L, int width) {
 	bf_ud* ud; int i;
 	if (width > 256) width = 256; if (width < 1) width = 1;
 	ud = (bf_ud*)lua_newuserdata(L, 1 + UDBYTES(width-1));
+#if !defined(LUA_VERSION_NUM) || LUA_VERSION_NUM == 501
+	/* compat-5.2 does not address this: in 5.1, userdata will have an environment table */
+	/* note that the uservalue cannot be nil in 5.1, so we use an empty table for no NRT */
+	lua_createtable(L,0,0);
+	lua_setuservalue(L,-2);
+#endif
 	UDBITS(ud) = width-1;
 	for (i=0; (i < UDBYTES(UDBITS(ud))); i++) UDBYTEOF(ud,i) = 0;
 	luaL_getmetatable(L, METANAME);
@@ -577,7 +583,7 @@ static const luaL_Reg lb_meta[] = {
 	{NULL, NULL}
 };
 
-LUAMOD_API int luaopen_bitfield (lua_State *L) {
+LUALIB_API int luaopen_bitfield (lua_State *L) {
 	/* Try to set metatable for boolean, but do not disturb anything already in place */
 	lua_pushboolean(L, 0);
 	if (lua_getmetatable(L, -1)) {
