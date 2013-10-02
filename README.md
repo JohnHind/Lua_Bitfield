@@ -4,7 +4,7 @@ A bitfield is an add-in Lua type provided by the `bitfield.dll` / `bitfield.so` 
 
 This library is offered as an alternative to the standard Lua `bit32` library. The primary applications targeted are the implementation of communications protocols and the representation of bit-mapped registers in hardware devices.
 
-Bitfield is written for Lua 5.2 or later, but is is also compatible with Lua 5.1.
+Bitfield is written for Lua 5.2 or later, but it can also be compiled for Lua 5.1.
 
 ##Getting Started
 
